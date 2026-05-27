@@ -494,6 +494,103 @@
   }
 
   /* ----- Responsive ----- */
+  /* ----- Topbar actions ----- */
+  .topbar-actions {
+    display: flex;
+    gap: 0.2rem;
+  }
+
+  /* ----- PIN input ----- */
+  .pin-input {
+    text-align: center;
+    font-size: 1.4rem;
+    letter-spacing: 0.5em;
+    padding: 0.8rem 0;
+    font-weight: 500;
+  }
+  .pin-input:focus { letter-spacing: 0.5em; }
+
+  .unlock-error {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: #D88;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 0.8rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+  .unlock-error.shake { animation: shake 0.35s ease-out; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  /* ----- Settings ----- */
+  .settings-block {
+    text-align: left;
+    margin-bottom: 2.2rem;
+    padding-bottom: 1.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-block:last-of-type { border-bottom: none; }
+
+  .settings-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    margin-bottom: 0.6rem;
+  }
+  .settings-desc {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--text-mute);
+    line-height: 1.75;
+    margin-bottom: 1.2rem;
+  }
+  .settings-status {
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: 1rem;
+  }
+  .settings-msg {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    margin: 0.8rem 0;
+    color: var(--text-mute);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .settings-msg.error { color: #D88; }
+  .settings-msg.ok { color: var(--accent); }
+
+  /* ----- History delete ----- */
+  .history-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.7rem;
+    gap: 1rem;
+  }
+  .history-delete {
+    background: transparent;
+    border: none;
+    color: var(--text-faint);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: color 0.2s ease;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .history-delete:hover { color: var(--text-mute); }
+  .history-delete.armed { color: #D88; }
+
   @media (max-width: 480px) {
     .app { padding: 4.5rem 1.2rem 2rem; }
     .topbar { padding: 1.2rem 1.4rem; }
@@ -509,7 +606,10 @@
 
 <div class="topbar">
   <div class="mark">머무름<span class="dot"></span></div>
-  <button id="historyBtn">기록</button>
+  <div class="topbar-actions">
+    <button id="settingsBtn">설정</button>
+    <button id="historyBtn">기록</button>
+  </div>
 </div>
 
 <div class="app">
@@ -628,6 +728,87 @@
     <div class="btn-row">
       <button class="btn-quiet btn" onclick="finish(false)">기록 없이</button>
       <button class="btn" onclick="finish(true)">기록하고 마침</button>
+    </div>
+  </section>
+
+  <!-- LOCK -->
+  <section class="screen" id="screen-lock">
+    <div class="breath-wrap">
+      <div class="breath-glow"></div>
+      <div class="breath-circle"></div>
+    </div>
+    <div style="height:2rem"></div>
+    <p class="section-label">잠금</p>
+    <p class="subtitle">PIN을 입력하세요.</p>
+
+    <div class="field-group">
+      <input class="field pin-input" id="unlockPin" type="password"
+             inputmode="numeric" maxlength="6" autocomplete="off"
+             placeholder="••••">
+    </div>
+
+    <div class="unlock-error" id="unlockError" style="visibility:hidden">올바르지 않습니다</div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="submitUnlock()">열기</button>
+    </div>
+
+    <div class="btn-row" style="margin-top:2.5rem">
+      <button class="btn-quiet btn" onclick="confirmResetAll(this)">잠금 초기화</button>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="screen" id="screen-settings">
+    <p class="section-label">설정</p>
+
+    <div class="settings-block">
+      <h3 class="settings-heading">잠금</h3>
+      <p class="settings-desc">앱을 열 때 PIN을 입력해야 화면에 들어갈 수 있어요. 본인 외에 폰을 들여다보는 시선을 차단하는 정도의 역할입니다.</p>
+
+      <div id="lockNotSetUI">
+        <div class="field-group">
+          <div class="field-label">새 PIN (4–6 자리)</div>
+          <input class="field pin-input" id="newPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+        </div>
+        <div class="field-group">
+          <div class="field-label">확인</div>
+          <input class="field pin-input" id="confirmPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+        </div>
+        <div class="settings-msg" id="lockSetupMsg" style="display:none"></div>
+        <div class="btn-row">
+          <button class="btn" onclick="setupLock()">잠금 설정</button>
+        </div>
+      </div>
+
+      <div id="lockSetUI" hidden>
+        <p class="settings-status">잠금이 설정되어 있습니다.</p>
+        <div class="btn-row">
+          <button class="btn-outline btn" onclick="confirmRemoveLock(this)">잠금 해제</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-block">
+      <h3 class="settings-heading">데이터</h3>
+      <p class="settings-desc">기록은 이 기기의 브라우저에만 저장됩니다. 다른 사람이 이 링크로 접속해도 본인 폰의 기록은 보이지 않아요. 가끔 내보내기로 백업해두면 폰을 바꾸거나 데이터가 사라져도 복원할 수 있어요.</p>
+
+      <div class="btn-row" style="margin-bottom:0.6rem">
+        <button class="btn-outline btn" onclick="exportData()">내보내기</button>
+        <button class="btn-outline btn" onclick="triggerImport()">가져오기</button>
+      </div>
+
+      <div class="settings-msg" id="dataMsg" style="display:none"></div>
+
+      <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
+
+      <div class="btn-row" style="margin-top:1.4rem">
+        <button class="btn-outline btn" onclick="confirmClearAll(this)">모든 기록 지우기</button>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:1rem">
+      <button class="btn-outline btn" onclick="goHome()">돌아가기</button>
     </div>
   </section>
 
@@ -865,12 +1046,25 @@
         }
 
         item.innerHTML = `
-          <div class="history-date">${dateStr}</div>
+          <div class="history-top">
+            <div class="history-date">${dateStr}</div>
+            <button class="history-delete" data-ts="${s.ts}">지우기</button>
+          </div>
           <div class="history-chain">${chainHtml}</div>
           ${layersHtml}
           ${s.note ? `<div class="history-note">${escapeHtml(s.note)}</div>` : ''}
         `;
         listEl.appendChild(item);
+      });
+
+      // Wire up per-item delete (2-tap confirm)
+      listEl.querySelectorAll('.history-delete').forEach(btn => {
+        armConfirmButton(btn, '정말요?', () => {
+          const ts = parseInt(btn.dataset.ts, 10);
+          state.sessions = state.sessions.filter(s => s.ts !== ts);
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.sessions)); } catch (e) {}
+          showHistory();
+        });
       });
     }
     show('screen-history');
@@ -917,9 +1111,311 @@
     }
   });
 
+  // ---------- Lock (soft) ----------
+  const LOCK_KEY = 'meomureum-lock-hash';
+
+  async function sha256Hex(str) {
+    const buf = new TextEncoder().encode(str);
+    const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hashBuf))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function isLockSet() {
+    return !!localStorage.getItem(LOCK_KEY);
+  }
+
+  async function submitUnlock() {
+    const input = document.getElementById('unlockPin');
+    const err = document.getElementById('unlockError');
+    const stored = localStorage.getItem(LOCK_KEY);
+    if (!stored) { goHome(); return; }
+    const pin = input.value.trim();
+    if (!pin) return;
+    const hashed = await sha256Hex(pin);
+    if (hashed === stored) {
+      err.style.visibility = 'hidden';
+      input.value = '';
+      goHome();
+    } else {
+      input.value = '';
+      err.style.visibility = 'visible';
+      err.classList.remove('shake');
+      void err.offsetWidth;
+      err.classList.add('shake');
+    }
+  }
+
+  async function setupLock() {
+    const a = document.getElementById('newPin').value.trim();
+    const b = document.getElementById('confirmPin').value.trim();
+    const msg = document.getElementById('lockSetupMsg');
+    msg.style.display = 'block';
+    msg.classList.remove('ok');
+    msg.classList.add('error');
+
+    if (!/^\d{4,6}$/.test(a)) {
+      msg.textContent = 'PIN은 숫자 4–6자리로';
+      return;
+    }
+    if (a !== b) {
+      msg.textContent = '두 PIN이 일치하지 않습니다';
+      return;
+    }
+    const hash = await sha256Hex(a);
+    localStorage.setItem(LOCK_KEY, hash);
+    document.getElementById('newPin').value = '';
+    document.getElementById('confirmPin').value = '';
+    msg.classList.remove('error');
+    msg.classList.add('ok');
+    msg.textContent = '잠금이 설정되었습니다';
+    updateSettingsUI();
+  }
+
+  function removeLock() {
+    localStorage.removeItem(LOCK_KEY);
+    updateSettingsUI();
+  }
+
+  function updateSettingsUI() {
+    const notSet = document.getElementById('lockNotSetUI');
+    const set = document.getElementById('lockSetUI');
+    if (isLockSet()) {
+      notSet.hidden = true;
+      set.hidden = false;
+    } else {
+      notSet.hidden = false;
+      set.hidden = true;
+      // reset any prior message
+      const msg = document.getElementById('lockSetupMsg');
+      msg.style.display = 'none';
+    }
+  }
+
+  // ---------- Confirm-button pattern (2-tap) ----------
+  function armConfirmButton(btn, confirmLabel, onConfirm, timeout = 3000) {
+    const original = btn.textContent;
+    let armed = false;
+    let timer = null;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (armed) {
+        clearTimeout(timer);
+        onConfirm();
+      } else {
+        armed = true;
+        btn.textContent = confirmLabel;
+        btn.classList.add('armed');
+        timer = setTimeout(() => {
+          armed = false;
+          btn.textContent = original;
+          btn.classList.remove('armed');
+        }, timeout);
+      }
+    });
+  }
+
+  function confirmRemoveLock(btn) {
+    if (btn._armed) {
+      removeLock();
+      btn.textContent = '잠금 해제';
+      btn.classList.remove('armed');
+      btn._armed = false;
+      return;
+    }
+    btn._armed = true;
+    btn.textContent = '정말 해제할까요?';
+    btn.classList.add('armed');
+    setTimeout(() => {
+      if (btn._armed) {
+        btn._armed = false;
+        btn.textContent = '잠금 해제';
+        btn.classList.remove('armed');
+      }
+    }, 3000);
+  }
+
+  function confirmClearAll(btn) {
+    if (btn._armed) {
+      state.sessions = [];
+      try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+      btn.textContent = '지워졌습니다';
+      btn.classList.remove('armed');
+      btn._armed = false;
+      setTimeout(() => { btn.textContent = '모든 기록 지우기'; }, 1500);
+      return;
+    }
+    btn._armed = true;
+    btn.textContent = '모든 기록을 지웁니다. 정말요?';
+    btn.classList.add('armed');
+    setTimeout(() => {
+      if (btn._armed) {
+        btn._armed = false;
+        btn.textContent = '모든 기록 지우기';
+        btn.classList.remove('armed');
+      }
+    }, 3500);
+  }
+
+  function confirmResetAll(btn) {
+    if (btn._armed) {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(LOCK_KEY);
+      } catch (e) {}
+      state.sessions = [];
+      btn._armed = false;
+      goHome();
+      return;
+    }
+    btn._armed = true;
+    btn.textContent = '기록도 함께 사라집니다. 정말요?';
+    btn.classList.add('armed');
+    setTimeout(() => {
+      if (btn._armed) {
+        btn._armed = false;
+        btn.textContent = '잠금 초기화';
+        btn.classList.remove('armed');
+      }
+    }, 4000);
+  }
+
+  function goSettings() {
+    updateSettingsUI();
+    show('screen-settings');
+  }
+
+  // ---------- Export / Import ----------
+  const EXPORT_FORMAT = 'meomureum-export-v1';
+
+  function showDataMsg(text, type) {
+    const el = document.getElementById('dataMsg');
+    el.textContent = text;
+    el.classList.remove('error', 'ok');
+    if (type) el.classList.add(type);
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 4500);
+  }
+
+  function exportData() {
+    if (!state.sessions.length) {
+      showDataMsg('내보낼 기록이 없습니다.', 'error');
+      return;
+    }
+    const data = {
+      format: EXPORT_FORMAT,
+      exportedAt: new Date().toISOString(),
+      sessionCount: state.sessions.length,
+      sessions: state.sessions,
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const d = new Date();
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `meomureum-backup-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showDataMsg(`${state.sessions.length}개 기록을 내보냈습니다.`, 'ok');
+  }
+
+  function triggerImport() {
+    document.getElementById('importFileInput').click();
+  }
+
+  function handleImportFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+
+        if (!data || data.format !== EXPORT_FORMAT) {
+          showDataMsg('이 파일은 머무름의 백업 파일이 아닙니다.', 'error');
+          return;
+        }
+        if (!Array.isArray(data.sessions)) {
+          showDataMsg('파일 형식이 올바르지 않습니다.', 'error');
+          return;
+        }
+        if (data.sessions.length === 0) {
+          showDataMsg('이 파일에는 기록이 없습니다.', 'error');
+          return;
+        }
+
+        // Sanitize + dedupe by ts
+        const existingTs = new Set(state.sessions.map(s => Number(s.ts)));
+        const cleaned = data.sessions
+          .filter(s => s && typeof s.ts !== 'undefined' && Array.isArray(s.layers))
+          .map(s => ({
+            ts: Number(s.ts),
+            layers: s.layers.map(l => ({
+              emotion: typeof (l && l.emotion) === 'string' ? l.emotion : '',
+              context: typeof (l && l.context) === 'string' ? l.context : '',
+            })),
+            note: typeof s.note === 'string' ? s.note : '',
+          }))
+          .filter(s => !isNaN(s.ts) && !existingTs.has(s.ts));
+
+        if (cleaned.length === 0) {
+          showDataMsg('새로 추가된 기록은 없습니다.', 'ok');
+          return;
+        }
+
+        state.sessions = [...cleaned, ...state.sessions].sort((a, b) => b.ts - a.ts);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.sessions));
+        } catch (err) {
+          showDataMsg('저장 중 문제가 생겼습니다.', 'error');
+          return;
+        }
+
+        showDataMsg(`${cleaned.length}개의 새 기록을 가져왔습니다.`, 'ok');
+      } catch (err) {
+        showDataMsg('파일을 읽을 수 없습니다.', 'error');
+      }
+    };
+    reader.onerror = () => showDataMsg('파일을 읽을 수 없습니다.', 'error');
+    reader.readAsText(file);
+
+    // Reset so the same file can be selected again
+    event.target.value = '';
+  }
+
+  // ---------- Wire up settings/unlock ----------
+  document.getElementById('settingsBtn').addEventListener('click', goSettings);
+  document.getElementById('importFileInput').addEventListener('change', handleImportFile);
+
+  document.getElementById('unlockPin').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitUnlock();
+    }
+  });
+
+  document.getElementById('confirmPin').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      setupLock();
+    }
+  });
+
   (async () => {
     await loadSessions();
-    show('screen-home');
+    if (isLockSet()) {
+      show('screen-lock');
+      // focus PIN input after transition
+      setTimeout(() => document.getElementById('unlockPin').focus(), 600);
+    } else {
+      show('screen-home');
+    }
   })();
 
   // Register service worker for PWA / offline support.

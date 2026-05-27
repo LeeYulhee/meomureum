@@ -1,7 +1,7 @@
 // 머무름 PWA — Service Worker
 // Cache-first 전략으로 오프라인에서도 작동하도록 정적 자산을 캐싱.
 
-const CACHE_NAME = 'meomureum-v1';
+const CACHE_NAME = 'meomureum-v3';
 
 // scope-relative paths (works both at root and in subdirectory deployments)
 const ASSETS = [
