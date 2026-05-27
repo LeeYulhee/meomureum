@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>머무름</title>
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0F0D0B">
+<meta name="color-scheme" content="dark">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="머무름">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --bg: #0F0D0B;
+    --bg-2: #17141100;
+    --surface: rgba(255, 255, 255, 0.025);
+    --surface-hover: rgba(255, 255, 255, 0.05);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+
+    --text: #F0EBDD;
+    --text-mute: #8C8377;
+    --text-faint: #4F4A42;
+    --text-dim: #2E2A24;
+
+    --accent: #C8D4A0;
+    --accent-strong: #D8E4B0;
+    --accent-soft: rgba(200, 212, 160, 0.10);
+    --accent-glow: rgba(200, 212, 160, 0.25);
+
+    --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-image:
+      radial-gradient(ellipse at 50% 0%, rgba(200, 212, 160, 0.04), transparent 60%),
+      radial-gradient(ellipse at 50% 100%, rgba(200, 212, 160, 0.025), transparent 70%);
+    letter-spacing: -0.005em;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 1.5rem 3rem;
+    text-align: center;
+  }
+
+  .screen {
+    width: 100%;
+    max-width: 480px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+    position: absolute;
+  }
+  .screen.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    position: relative;
+  }
+
+  /* ----- Breathing visual ----- */
+  .breath-wrap {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .breath-glow {
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-glow), transparent 60%);
+    filter: blur(24px);
+    animation: glow 14s ease-in-out infinite;
+  }
+  .breath-circle {
+    position: relative;
+    width: 130px; height: 130px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%,
+      rgba(200, 212, 160, 0.20),
+      rgba(200, 212, 160, 0.04) 70%);
+    border: 1px solid rgba(200, 212, 160, 0.22);
+    animation: breathe 14s ease-in-out infinite;
+    box-shadow: inset 0 0 30px rgba(200, 212, 160, 0.08);
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(0.82); }
+    50%      { transform: scale(1.12); }
+  }
+  @keyframes glow {
+    0%, 100% { transform: scale(0.7); opacity: 0.35; }
+    50%      { transform: scale(1.05); opacity: 0.65; }
+  }
+  .breath-small { width: 70px; height: 70px; }
+  .breath-wrap.small { width: 120px; height: 120px; }
+  .breath-wrap.small .breath-glow { width: 110px; height: 110px; filter: blur(16px); }
+
+  /* ----- Typography ----- */
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-faint);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+  }
+
+  .section-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-mute);
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    margin-bottom: 1.6rem;
+  }
+
+  .title {
+    font-size: 1.7rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.8rem;
+    letter-spacing: -0.02em;
+    line-height: 1.4;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--text-mute);
+    margin-bottom: 2.2rem;
+    line-height: 1.75;
+    letter-spacing: -0.005em;
+  }
+
+  .step-num {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-faint);
+    letter-spacing: 0.15em;
+    margin-bottom: 1.8rem;
+  }
+  .step-num .now { color: var(--accent); }
+
+  .step-phrase {
+    font-size: 1.5rem;
+    line-height: 1.7;
+    color: var(--text);
+    margin: 2.2rem 0.5rem;
+    letter-spacing: -0.025em;
+    font-weight: 500;
+  }
+
+  .chain {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-mute);
+    letter-spacing: 0.04em;
+    margin-bottom: 1.2rem;
+    min-height: 1.2em;
+  }
+  .chain .seg {
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+  }
+  .chain .seg.now {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .chain .arrow {
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+  }
+
+  /* ----- Progress bar ----- */
+  .progress {
+    display: flex;
+    gap: 4px;
+    margin-top: 2rem;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .progress-seg {
+    flex: 1;
+    height: 2px;
+    background: var(--text-dim);
+    transition: background 0.5s ease;
+  }
+  .progress-seg.done { background: var(--text-faint); }
+  .progress-seg.active { background: var(--accent); }
+
+  /* ----- Buttons ----- */
+  .btn {
+    background: var(--accent);
+    color: #0F0D0B;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 0.85rem 1.8rem;
+    border-radius: 8px;
+    transition: all 0.25s ease;
+    letter-spacing: -0.005em;
+    margin: 0.3rem;
+  }
+  .btn:hover, .btn:focus-visible {
+    background: var(--accent-strong);
+    outline: none;
+    transform: translateY(-1px);
+  }
+  .btn:active { transform: translateY(0); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+  }
+  .btn-outline:hover {
+    background: var(--surface-hover);
+    border-color: var(--text-mute);
+    color: var(--text);
+  }
+
+  .btn-quiet {
+    background: transparent;
+    color: var(--text-mute);
+    border: none;
+    padding: 0.85rem 1.2rem;
+    font-weight: 500;
+  }
+  .btn-quiet:hover {
+    background: transparent;
+    color: var(--text);
+    transform: none;
+  }
+
+  .btn-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 1.5rem;
+  }
+  .btn-row.stack { flex-direction: column; gap: 0.5rem; align-items: stretch; }
+  .btn-row.stack .btn { width: 100%; }
+
+  /* ----- Form fields ----- */
+  .field-group {
+    margin: 1rem 0;
+    text-align: left;
+  }
+  .field-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-faint);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    margin-bottom: 0.55rem;
+    padding-left: 0.1rem;
+  }
+  .field {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0.7rem 0;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    color: var(--text);
+    text-align: left;
+    transition: border-color 0.3s ease;
+    letter-spacing: -0.005em;
+  }
+  .field:focus {
+    outline: none;
+    border-bottom-color: var(--accent);
+  }
+  .field::placeholder {
+    color: var(--text-faint);
+    font-weight: 400;
+  }
+  textarea.field {
+    resize: none;
+    line-height: 1.7;
+    padding: 0.7rem 0;
+  }
+
+  /* ----- Chips ----- */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    margin: 1.2rem 0 0.5rem;
+  }
+  .chip {
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-mute);
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: -0.005em;
+  }
+  .chip:hover {
+    border-color: var(--border-strong);
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+  .chip.selected {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ----- Topbar ----- */
+  .topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.4rem 1.8rem;
+    font-size: 0.72rem;
+    z-index: 10;
+    background: linear-gradient(180deg, var(--bg), transparent);
+  }
+  .topbar button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem 0.6rem;
+    color: var(--text-mute);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transition: color 0.25s ease;
+  }
+  .topbar button:hover { color: var(--text); }
+  .mark {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .mark .dot {
+    display: inline-block;
+    width: 4px; height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-left: 6px;
+    margin-bottom: 1px;
+  }
+
+  /* ----- History ----- */
+  .history { width: 100%; text-align: left; }
+  .history-item {
+    padding: 1.4rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-item:last-child { border-bottom: none; }
+
+  .history-date {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-faint);
+    letter-spacing: 0.12em;
+    margin-bottom: 0.7rem;
+    text-transform: uppercase;
+  }
+  .history-chain {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.5rem;
+    align-items: center;
+    margin-bottom: 0.9rem;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .history-chain .arrow {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  .history-layer {
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: var(--text-mute);
+    line-height: 1.7;
+    margin: 0.2rem 0;
+    padding-left: 0.7rem;
+    border-left: 2px solid var(--border);
+  }
+  .history-layer .emo {
+    color: var(--text);
+    font-weight: 500;
+    margin-right: 0.4em;
+  }
+  .history-note {
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: var(--text-mute);
+    line-height: 1.75;
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px dashed var(--border);
+    font-style: normal;
+  }
+
+  .empty {
+    color: var(--text-faint);
+    font-weight: 400;
+    padding: 4rem 0;
+    text-align: center;
+    font-size: 0.92rem;
+  }
+
+  .checkin-prompt {
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--text-mute);
+    line-height: 1.9;
+    margin: 1.2rem auto 2rem;
+    max-width: 360px;
+  }
+
+  .hint {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-faint);
+    margin-top: 2rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ----- Responsive ----- */
+  @media (max-width: 480px) {
+    .app { padding: 4.5rem 1.2rem 2rem; }
+    .topbar { padding: 1.2rem 1.4rem; }
+    .step-phrase { font-size: 1.3rem; margin: 1.8rem 0.3rem; }
+    .title { font-size: 1.45rem; }
+    .breath-wrap { width: 200px; height: 200px; }
+    .breath-circle { width: 110px; height: 110px; }
+    .breath-glow { width: 180px; height: 180px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="mark">머무름<span class="dot"></span></div>
+  <button id="historyBtn">기록</button>
+</div>
+
+<div class="app">
+
+  <!-- HOME -->
+  <section class="screen" id="screen-home">
+    <div class="breath-wrap">
+      <div class="breath-glow"></div>
+      <div class="breath-circle"></div>
+    </div>
+    <div style="height:2rem"></div>
+    <p class="meta">함께 머무르기</p>
+    <p class="title">지금 올라온 감정을 없애려 하지 않고,<br>그저 함께 있습니다.</p>
+    <div class="btn-row">
+      <button class="btn" onclick="start()">시작</button>
+    </div>
+  </section>
+
+  <!-- NAME EMOTION + CONTEXT -->
+  <section class="screen" id="screen-name">
+    <p class="section-label">알아차림</p>
+    <p class="chain" id="nameChain"></p>
+    <p class="title" id="nameTitle">무엇이 올라와 있나요?</p>
+    <p class="subtitle" id="nameSubtitle">감정에 이름을 붙이고, 어떤 상황·생각인지 함께 적어보세요. 모두 선택입니다.</p>
+
+    <div class="chips" id="chips">
+      <span class="chip" data-emotion="두려움">두려움</span>
+      <span class="chip" data-emotion="분노">분노</span>
+      <span class="chip" data-emotion="슬픔">슬픔</span>
+      <span class="chip" data-emotion="불안">불안</span>
+      <span class="chip" data-emotion="수치">수치</span>
+      <span class="chip" data-emotion="자존심">자존심</span>
+      <span class="chip" data-emotion="욕망">욕망</span>
+      <span class="chip" data-emotion="무기력">무기력</span>
+      <span class="chip" data-emotion="외로움">외로움</span>
+      <span class="chip" data-emotion="상처">상처</span>
+      <span class="chip" data-emotion="죄책감">죄책감</span>
+      <span class="chip" data-emotion="질투">질투</span>
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">감정</div>
+      <input class="field" id="emotionField" type="text" placeholder="예: 두려움" autocomplete="off">
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">상황 · 생각</div>
+      <textarea class="field" id="contextField" rows="2" placeholder="예: 취업을 못할까봐"></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-quiet btn" onclick="goPractice()">건너뛰기</button>
+      <button class="btn" onclick="goPractice()">머무르기</button>
+    </div>
+  </section>
+
+  <!-- PRACTICE STEPS -->
+  <section class="screen" id="screen-practice">
+    <p class="step-num" id="stepNum"><span class="now">01</span> / 05</p>
+    <p class="chain" id="practiceChain"></p>
+
+    <div class="breath-wrap">
+      <div class="breath-glow"></div>
+      <div class="breath-circle"></div>
+    </div>
+
+    <p class="step-phrase" id="stepPhrase">…</p>
+
+    <div class="progress" id="progress"></div>
+
+    <div class="btn-row">
+      <button class="btn-quiet btn" onclick="prevStep()" id="prevBtn">앞으로</button>
+      <button class="btn" onclick="nextStep()" id="nextBtn">다음으로</button>
+    </div>
+    <p class="hint">호흡과 함께 충분히 머무른 뒤 넘어갑니다</p>
+  </section>
+
+  <!-- CHECK-IN -->
+  <section class="screen" id="screen-checkin">
+    <div class="breath-wrap small">
+      <div class="breath-glow"></div>
+      <div class="breath-circle breath-small"></div>
+    </div>
+    <div style="height:1.5rem"></div>
+    <p class="section-label">점검</p>
+    <p class="chain" id="checkinChain"></p>
+    <p class="title">지금 어떤가요?</p>
+    <p class="checkin-prompt">
+      가라앉았다면 여기서 마칩니다.<br>
+      아직 무언가 남아있다면,<br>
+      그 아래의 감정에 한 번 더 머무릅니다.
+    </p>
+
+    <div class="btn-row">
+      <button class="btn-outline btn" onclick="goNextLayer()">아직 남아있습니다</button>
+      <button class="btn" onclick="goCloseFromCheckin()">가라앉았습니다</button>
+    </div>
+  </section>
+
+  <!-- CLOSE -->
+  <section class="screen" id="screen-close">
+    <div class="breath-wrap small">
+      <div class="breath-glow"></div>
+      <div class="breath-circle breath-small"></div>
+    </div>
+    <div style="height:1.5rem"></div>
+    <p class="section-label">마침</p>
+    <p class="chain" id="closeChain"></p>
+    <p class="title">마쳤습니다.</p>
+    <p class="subtitle">남기고 싶은 말이 있다면.</p>
+
+    <div class="field-group">
+      <textarea class="field" id="noteField" rows="3" placeholder="(선택)"></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-quiet btn" onclick="finish(false)">기록 없이</button>
+      <button class="btn" onclick="finish(true)">기록하고 마침</button>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="screen" id="screen-history">
+    <p class="section-label">지난 머무름</p>
+    <div class="history" id="historyList"></div>
+    <div class="btn-row" style="margin-top:2rem">
+      <button class="btn-outline btn" onclick="goHome()">돌아가기</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const STORAGE_KEY = 'surrender-sessions';
+
+  const steps = [
+    { num: '01', phrase: '이 감정이 여기 있음을\n알아차립니다.' },
+    { num: '02', phrase: '이 감정을\n밀어내지 않습니다.' },
+    { num: '03', phrase: '이 감정에\n자리를 내어줍니다.' },
+    { num: '04', phrase: '이 감정에\n항복합니다.' },
+    { num: '05', phrase: '이 감정과 함께\n머무릅니다.' },
+  ];
+
+  let state = {
+    currentStepIdx: 0,
+    layers: [],
+    note: '',
+    sessions: [],
+  };
+
+  async function loadSessions() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        state.sessions = JSON.parse(raw);
+      }
+    } catch (e) { state.sessions = []; }
+  }
+
+  async function saveSession() {
+    const session = {
+      ts: Date.now(),
+      layers: state.layers.map(l => ({
+        emotion: l.emotion || '',
+        context: l.context || '',
+      })),
+      note: state.note || '',
+    };
+    state.sessions.unshift(session);
+    if (state.sessions.length > 200) state.sessions = state.sessions.slice(0, 200);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.sessions));
+    } catch (e) { console.error('save failed', e); }
+  }
+
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function start() {
+    state.layers = [];
+    state.note = '';
+    state.currentStepIdx = 0;
+    resetNameScreen();
+    updateNameScreen();
+    show('screen-name');
+  }
+
+  function resetNameScreen() {
+    document.getElementById('emotionField').value = '';
+    document.getElementById('contextField').value = '';
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  }
+
+  function updateNameScreen() {
+    const chainEl = document.getElementById('nameChain');
+    const titleEl = document.getElementById('nameTitle');
+    const subtitleEl = document.getElementById('nameSubtitle');
+
+    if (state.layers.length === 0) {
+      chainEl.innerHTML = '';
+      titleEl.textContent = '무엇이 올라와 있나요?';
+      subtitleEl.textContent = '감정에 이름을 붙이고, 어떤 상황·생각인지 함께 적어보세요. 모두 선택입니다.';
+    } else {
+      const prevEmotion = state.layers[state.layers.length - 1]?.emotion;
+      chainEl.innerHTML = renderChain(state.layers, null);
+      titleEl.textContent = prevEmotion
+        ? `이 ${prevEmotion} 아래에는 무엇이 있나요?`
+        : '이 감정 아래에는 무엇이 있나요?';
+      subtitleEl.textContent = '직전 감정의 뿌리에 자리한 더 깊은 감정이나 생각을 찾아봅니다.';
+    }
+  }
+
+  function layerDisplay(layer) {
+    if (!layer) return '이름 없음';
+    if (layer.emotion) return layer.emotion;
+    if (layer.context) {
+      return layer.context.length > 12 ? layer.context.slice(0, 12) + '…' : layer.context;
+    }
+    return '이름 없음';
+  }
+
+  function renderChain(layers, currentLabel) {
+    if (!layers.length && !currentLabel) return '';
+    const parts = [];
+    layers.forEach((l, i) => {
+      const isLast = (i === layers.length - 1) && !currentLabel;
+      const cls = isLast ? 'seg now' : 'seg';
+      parts.push(`<span class="${cls}">${escapeHtml(layerDisplay(l))}</span>`);
+    });
+    if (currentLabel) {
+      parts.push(`<span class="seg now">${escapeHtml(currentLabel)}</span>`);
+    }
+    return parts.join('<span class="arrow">→</span>');
+  }
+
+  function goPractice() {
+    const fieldVal = document.getElementById('emotionField').value.trim();
+    const chipSelected = document.querySelector('.chip.selected');
+    const emotion = fieldVal || (chipSelected ? chipSelected.dataset.emotion : '');
+    const context = document.getElementById('contextField').value.trim();
+
+    state.layers.push({ emotion, context });
+    state.currentStepIdx = 0;
+    renderStep();
+    show('screen-practice');
+  }
+
+  function renderStep() {
+    const step = steps[state.currentStepIdx];
+    document.getElementById('stepPhrase').innerHTML = step.phrase.replace(/\n/g, '<br>');
+    document.getElementById('stepNum').innerHTML = `<span class="now">${step.num}</span> / 05`;
+
+    const prevLayers = state.layers.slice(0, -1);
+    const currentLayer = state.layers[state.layers.length - 1];
+    const currentLabel = layerDisplay(currentLayer);
+    document.getElementById('practiceChain').innerHTML = renderChain(prevLayers, currentLabel);
+
+    const progressEl = document.getElementById('progress');
+    progressEl.innerHTML = '';
+    for (let i = 0; i < steps.length; i++) {
+      const seg = document.createElement('span');
+      seg.className = 'progress-seg';
+      if (i === state.currentStepIdx) seg.classList.add('active');
+      else if (i < state.currentStepIdx) seg.classList.add('done');
+      progressEl.appendChild(seg);
+    }
+
+    document.getElementById('prevBtn').style.display =
+      state.currentStepIdx === 0 ? 'none' : '';
+
+    document.getElementById('nextBtn').textContent =
+      state.currentStepIdx === steps.length - 1 ? '점검으로' : '다음으로';
+  }
+
+  function nextStep() {
+    if (state.currentStepIdx < steps.length - 1) {
+      state.currentStepIdx++;
+      renderStep();
+    } else { goCheckin(); }
+  }
+
+  function prevStep() {
+    if (state.currentStepIdx > 0) {
+      state.currentStepIdx--;
+      renderStep();
+    }
+  }
+
+  function goCheckin() {
+    document.getElementById('checkinChain').innerHTML = renderChain(state.layers, null);
+    show('screen-checkin');
+  }
+
+  function goNextLayer() {
+    resetNameScreen();
+    updateNameScreen();
+    show('screen-name');
+  }
+
+  function goCloseFromCheckin() {
+    document.getElementById('closeChain').innerHTML = renderChain(state.layers, null);
+    document.getElementById('noteField').value = '';
+    show('screen-close');
+  }
+
+  async function finish(saveNote) {
+    state.note = saveNote ? document.getElementById('noteField').value.trim() : '';
+    await saveSession();
+    goHome();
+  }
+
+  async function showHistory() {
+    await loadSessions();
+    const listEl = document.getElementById('historyList');
+    listEl.innerHTML = '';
+
+    if (!state.sessions.length) {
+      listEl.innerHTML = '<p class="empty">아직 기록이 없습니다</p>';
+    } else {
+      state.sessions.forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        const d = new Date(s.ts);
+        const dateStr = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} · ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+        let layers = [];
+        if (s.layers && Array.isArray(s.layers) && s.layers.length) layers = s.layers;
+        else if (s.emotion) layers = [{ emotion: s.emotion, context: '' }];
+
+        let chainHtml = '';
+        if (layers.length) {
+          chainHtml = layers.map(l =>
+            `<span>${escapeHtml(layerDisplay(l))}</span>`
+          ).join('<span class="arrow">→</span>');
+        } else {
+          chainHtml = '<span style="color: var(--text-faint);">이름 없는 머무름</span>';
+        }
+
+        let layersHtml = '';
+        if (layers.length) {
+          layersHtml = layers.map(l => {
+            const emo = l.emotion ? `<span class="emo">${escapeHtml(l.emotion)}</span>` : '';
+            const ctx = l.context ? escapeHtml(l.context) : '';
+            const sep = (emo && ctx) ? '— ' : '';
+            const content = emo + (sep ? `${sep}${ctx}` : (ctx ? `${ctx}` : ''));
+            if (!emo && !ctx) return '';
+            return `<div class="history-layer">${content}</div>`;
+          }).join('');
+        }
+
+        item.innerHTML = `
+          <div class="history-date">${dateStr}</div>
+          <div class="history-chain">${chainHtml}</div>
+          ${layersHtml}
+          ${s.note ? `<div class="history-note">${escapeHtml(s.note)}</div>` : ''}
+        `;
+        listEl.appendChild(item);
+      });
+    }
+    show('screen-history');
+  }
+
+  function goHome() { show('screen-home'); }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  document.getElementById('historyBtn').addEventListener('click', showHistory);
+
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const wasSelected = chip.classList.contains('selected');
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      if (!wasSelected) {
+        chip.classList.add('selected');
+        document.getElementById('emotionField').value = '';
+      }
+    });
+  });
+
+  document.getElementById('emotionField').addEventListener('input', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const active = document.querySelector('.screen.active');
+    if (!active) return;
+    if (active.id === 'screen-practice') {
+      const tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        nextStep();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        prevStep();
+      }
+    }
+  });
+
+  (async () => {
+    await loadSessions();
+    show('screen-home');
+  })();
+
+  // Register service worker for PWA / offline support.
+  // SW is a progressive enhancement — if it fails (e.g. when previewed in an
+  // environment that doesn't serve sw.js next to index.html), the app still
+  // works normally. Failures are silently ignored to keep the console clean.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
